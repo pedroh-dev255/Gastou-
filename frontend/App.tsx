@@ -8,7 +8,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { Platform } from 'react-native';
+import { Platform, Alert, Linking } from 'react-native';
+
+import {
+  BatteryOptEnabled,
+  OpenOptimizationSettings,
+  RequestDisableOptimization,
+} from 'react-native-battery-optimization-check';
 
 import { ThemeProvider, useTheme } from './src/components/ThemeContext';
 import { useTheme as useNavTheme } from '@react-navigation/native';
@@ -23,7 +29,22 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 // Database
 import { runMigrations } from './src/database/migrations/init';
 import { getUser } from './src/database/domains/users/userRepository';
+import DeviceInfo from 'react-native-device-info';
 
+
+async function checkBatterySaver() {
+  if (Platform.OS === 'android') {
+    const isOptimized = await BatteryOptEnabled();
+    if (isOptimized) {
+      await Alert.alert(
+        'Economia de bateria ativa',
+        'Para notificações funcionarem corretamente, desative o modo de economia de bateria para este app.'
+      );
+
+      await RequestDisableOptimization();
+    }
+  }
+}
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +53,7 @@ export async function createDefaultChannel() {
   await notifee.createChannel({
     id: 'default',
     name: 'Default Channel',
+    sound: 'notification_sound',
     importance: AndroidImportance.HIGH,
   });
 }
@@ -101,6 +123,8 @@ function RootNavigation() {
     async function bootstrap() {
       runMigrations();
       createDefaultChannel();
+
+      checkBatterySaver();
 
       const user = await getUser();
       setOnboardingCompleted(user?.onboarding_completed === 1);

@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { useTheme as useNavTheme } from '@react-navigation/native';
+import { useTheme } from './ThemeContext';
 
 type Props = {
   visible: boolean;
@@ -22,6 +24,10 @@ export default function EditUserNameModal({
   onSave,
 }: Props) {
   const [name, setName] = useState(initialValue);
+  const { darkMode, toggleDarkMode } = useTheme();
+  const { colors } = useNavTheme();
+
+  const styles = createStyles(colors, darkMode);
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -51,7 +57,7 @@ export default function EditUserNameModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, darkMode: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -60,7 +66,7 @@ const styles = StyleSheet.create({
   },
   modal: {
     width: '85%',
-    backgroundColor: '#fff',
+    backgroundColor: darkMode ? '#333333' : '#fff',
     borderRadius: 12,
     padding: 20,
   },
@@ -68,10 +74,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: darkMode ? '#555' : '#ccc',
+    color: colors.text,
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,

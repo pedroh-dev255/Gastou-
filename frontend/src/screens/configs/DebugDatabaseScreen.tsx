@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, Button } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, Button, TouchableOpacity } from 'react-native';
+import notifee, { AndroidImportance } from '@notifee/react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { useTheme as useNavTheme } from '@react-navigation/native';
 import { useTheme } from '../../components/ThemeContext';
 import { db } from '../../database/index';
@@ -23,6 +25,17 @@ export default function DebugDatabaseScreen() {
     setTables(result.rows?._array ?? []);
   }
 
+  function testeNotificacao() {
+    notifee.displayNotification({
+      title: 'Teste de Notificação',
+      body: 'Esta é uma notificação de teste do Gastou?',
+      android: {
+        channelId: 'default',
+        importance: AndroidImportance.HIGH,
+      },
+    });
+  }
+
   function verTabela(nome: string) {
     const result = db.execute(`SELECT * FROM ${nome}`);
     console.log(nome, result.rows?._array);
@@ -32,6 +45,17 @@ export default function DebugDatabaseScreen() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>📊 Debug SQLite</Text>
+
+      <View style={{ marginBottom: 16, flexDirection: 'row', gap: 16 }}>
+        <TouchableOpacity onPress={carregar} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Feather name="refresh-cw" size={16} color={colors.text} />
+          <Text style={{ color: colors.text }}>  atualizar lista de tabelas</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={testeNotificacao} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Feather name="send" size={16} color={colors.text} />
+          <Text style={{ color: colors.text }}>  Teste de notificação</Text>
+        </TouchableOpacity>
+      </View>
 
       {tables.map(t => (
         <View key={t.name} style={styles.card}>
