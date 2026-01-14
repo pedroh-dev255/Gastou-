@@ -53,6 +53,7 @@ export async function createDefaultChannel() {
   await notifee.createChannel({
     id: 'default',
     name: 'Default Channel',
+    vibration: true,
     sound: 'notification_sound',
     importance: AndroidImportance.HIGH,
   });
@@ -141,22 +142,17 @@ function RootNavigation() {
     <NavigationContainer theme={theme}>
       <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!onboardingCompleted ? (
-          <Stack.Screen
-            name="Onboarding"
-            component={OnboardingScreen}
-          />
-        ) : (
-          <>
-            <Stack.Screen name="Tabs" component={TabRoutes} />
-            <Stack.Screen
-              name="DebugDatabase"
-              component={DebugDatabaseScreen}
-              options={{ presentation: 'modal' }}
-            />
-          </>
-        )}
+      <Stack.Navigator
+        screenOptions={{ headerShown: false }}
+        initialRouteName={onboardingCompleted ? 'Tabs' : 'Onboarding'}
+      >
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="Tabs" component={TabRoutes} />
+        <Stack.Screen
+          name="DebugDatabase"
+          component={DebugDatabaseScreen}
+          options={{ presentation: 'modal' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

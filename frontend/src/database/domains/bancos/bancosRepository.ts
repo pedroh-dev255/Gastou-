@@ -2,7 +2,7 @@ import { db } from '../../index';
 
 export async function getAllBancos() {
     const result = await db.execute(
-        'SELECT * FROM bancos;'
+        'SELECT bancos.id as id, bancos.nome as nome, bancos.cor as cor, tipo_banco.descricao as descricao FROM bancos INNER JOIN tipo_banco ON bancos.tipo = tipo_banco.id;'
     );
     const bancos = [];
 

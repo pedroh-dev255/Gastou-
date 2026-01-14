@@ -12,7 +12,7 @@ export function createBancosTable() {
     db.execute(`
         CREATE TABLE IF NOT EXISTS bancos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
+            nome TEXT NOT NULL UNIQUE,
             cor VARCHAR(7) DEFAULT '#000000',
             tipo INTEGER DEFAULT 0,
             status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'bloqueado', 'pausado', 'inativo')),
@@ -23,6 +23,6 @@ export function createBancosTable() {
     `);
 
     db.execute(`
-        INSERT OR IGNORE INTO bancos (id, nome, cor, tipo) VALUES (1, 'Dinheiro', '#FFD700', 0);
+        INSERT OR IGNORE INTO bancos (id, nome, cor, tipo) VALUES (1, 'Dinheiro', '#ccbe70', 0);
     `);
 }

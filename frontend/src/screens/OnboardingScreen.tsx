@@ -9,25 +9,31 @@ import {
   Dimensions,
   Switch,
   Alert,
+  FlatList,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { updateUserOnboardingCompleted, getUser, updateUserName, updateUserNotificationsEnabled } from '../database/domains/users/userRepository';
+import { getAllBancos, addBanco, updateBanco } from '../database/domains/bancos/bancosRepository';
 import { useNavigation } from '@react-navigation/native';
 import { Platform } from 'react-native';
 import notifee from '@notifee/react-native';
 import { useTheme } from '../components/ThemeContext';
 
 import EditUserNameModal from '../components/EditUserNameModal';
+import AddEditBancoModal from '../components/AddEditBancoModal';
 
 const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const navigation = useNavigation<any>();
   const [userName, setUserName] = useState('Usuário');
+  const [bancos, setBancos] = useState<any>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const { darkMode, toggleDarkMode } = useTheme();
   const [notifications, setNotifications] = useState(false);
   const [step, setStep] = useState(0);
+  const [modalBancoVisible, setModalBancoVisible] = useState(false);
+  const [bancoSelecionado, setBancoSelecionado] = useState<any>(null);
 
   const translateX = useRef(new Animated.Value(0)).current;
 
@@ -35,6 +41,7 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     loadUser();
+    loadBancos();
   }, []);
 
   async function loadUser() {
@@ -42,6 +49,11 @@ export default function OnboardingScreen() {
     if (user?.nome) setUserName(user.nome);
     if (user?.notifications_enabled !== undefined)
       setNotifications(user.notifications_enabled === 1);
+  }
+
+  async function loadBancos() {
+    const bancos = await getAllBancos();
+    setBancos(bancos);
   }
 
   async function finishOnboarding() {
@@ -56,6 +68,15 @@ export default function OnboardingScreen() {
     await updateUserName(name);
     setUserName(name);
     setModalVisible(false);
+  }
+
+  async function updateBanco(banco: any) {
+    await updateBanco(banco);
+  }
+
+  async function addBancoFunction(banco: any) {
+    const {nome, tipo_id, cor} = banco;
+    await addBanco(nome, cor, tipo_id);
   }
 
   async function updateNotifications(value: boolean) {
@@ -103,6 +124,10 @@ export default function OnboardingScreen() {
           />
           <Text style={styles.title}>Bem-vindo ao Gastou?</Text>
           <Text style={styles.subtitle}>Seu assistente financeiro pessoal.</Text>
+
+          <TouchableOpacity style={styles.nextButton} onPress={next}>
+            <Feather name="arrow-right" size={24} color={darkMode ? 'black' : 'white'} />
+          </TouchableOpacity>
         </>
       );
     }
@@ -120,7 +145,7 @@ export default function OnboardingScreen() {
               onPress={() => setModalVisible(true)}
             >
               <Text style={styles.label}>Como gostaria de ser chamado?</Text>
-              <Text style={styles.value}>{userName}</Text>
+              <Text style={styles.value}>  {userName}</Text>
             </TouchableOpacity>
 
             <View style={styles.item}>
@@ -146,6 +171,8 @@ export default function OnboardingScreen() {
             onClose={() => setModalVisible(false)}
             onSave={handleSaveName}
           />
+          
+
         </>
       );
     }
@@ -153,30 +180,69 @@ export default function OnboardingScreen() {
     // Step 2: Configuração dos bancos
     if (step === 2) {
       return (
-        <>
-          <Text style={styles.title}>Configuração dos bancos</Text>
-          <Text style={styles.subtitle}>Adicione suas contas bancárias para acompanhar seus gastos.</Text>
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Configuração bancária</Text>
+          <Text style={styles.subtitle}>
+            Adicione suas contas bancárias para acompanhar seus gastos.
+          </Text>
 
-          <View style={styles.form}>
-            <TouchableOpacity style={styles.item}>
-              <Text style={styles.label}>Adicionar conta bancária</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.item}>
-              <Text style={styles.label}>Ver contas cadastradas</Text>
-            </TouchableOpacity>
-          </View>
+          <FlatList
+            data={bancos}
+            keyExtractor={(item) => String(item.id)}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.bankList}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.cardBanck,
+                  { backgroundColor: item.cor },
+                ]}
+              >
+                <Text style={styles.label_card}>{item.nome}</Text>
+                <Text style={styles.type_card}>
+                  Tipo: {item.descricao}
+                </Text>
+              </View>
+            )}
+            ListFooterComponent={
+              <TouchableOpacity
+                style={styles.addCard}
+                onPress={() => {
+                  setBancoSelecionado(null);
+                  setModalBancoVisible(true);
+                }}
+              >
+                <Text style={styles.addText}>+</Text>
+              </TouchableOpacity>
+            }
+          />
 
           <TouchableOpacity
-            style={styles.finishButton}
+            style={styles.finishButtonFixed}
             onPress={finishOnboarding}
           >
-            <Text style={{ color: 'white' }}>Finalizar</Text>
+            <Text style={styles.finishText}>Finalizar</Text>
           </TouchableOpacity>
-        </>
+
+          <AddEditBancoModal
+            visible={modalBancoVisible}
+            banco={bancoSelecionado}
+            onClose={() => setModalBancoVisible(false)}
+            onSave={async (data) => {
+              if (data.id) {
+                await updateBanco(data);
+              } else {
+                await addBancoFunction(data);
+              }
+              loadBancos();
+              setModalBancoVisible(false);
+            }}
+          />
+        </View>
       );
     }
   }
+
 
   return (
     <View style={styles.container}>
@@ -189,11 +255,7 @@ export default function OnboardingScreen() {
         {renderStep()}
       </Animated.View>
 
-      {step === 0 && (
-        <TouchableOpacity style={styles.nextButton} onPress={next}>
-          <Feather name="arrow-right" size={24} color={darkMode ? 'white' : 'black'} />
-        </TouchableOpacity>
-      )}
+
     </View>
   );
 }
@@ -207,6 +269,9 @@ const createStyles = (darkMode: boolean) =>
       backgroundColor: darkMode ? '#1c002c' : '#f7eadb',
     },
     content: {
+      flex: 1,
+      justifyContent: 'center',
+      width: '100%',
       alignItems: 'center',
     },
     title: {
@@ -233,6 +298,7 @@ const createStyles = (darkMode: boolean) =>
       borderRadius: 40,
     },
     finishButton: {
+      bottom: -40,
       marginTop: 40,
       backgroundColor: '#315174',
       paddingVertical: 12,
@@ -242,6 +308,82 @@ const createStyles = (darkMode: boolean) =>
     form: {
       marginTop: 24,
       width: '80%',
+    },
+    cardBankList: {
+      marginTop: 24,
+      width: 800,
+      maxHeight: 200,
+    },
+    label_card: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      elevation: 1,
+      color: darkMode ? 'white' : 'black',
+      marginBottom: 8, },
+    type_card : {
+      fontSize: 16,
+      
+      color: '#000000ea',
+      alignSelf: 'flex-end',
+    },
+    previewText: {
+      color: darkMode ? 'white' : 'black',
+      fontWeight: 'bold',
+    },
+    stepContainer: {
+      flex: 1,
+      width: '100%',
+      paddingHorizontal: 16,
+    },
+
+
+    bankList: {
+      paddingBottom: 120, // espaço pro botão Finalizar
+      alignItems: 'center',
+    },
+
+    cardBanck: {
+      width: 300,
+      height: 120,
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 12,
+      justifyContent: 'space-between',
+    },
+
+    addCard: {
+      width: 300,
+      height: 120,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: '#aaa',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: darkMode ? '#383838' : '#e0e0e0',
+    },
+
+    addText: {
+      fontSize: 40,
+      fontWeight: 'bold',
+      color: darkMode ? '#aaa' : '#555',
+    },
+
+    finishButtonFixed: {
+      position: 'absolute',
+      bottom: 24,
+      alignSelf: 'center',
+      backgroundColor: '#315174',
+      paddingVertical: 14,
+      paddingHorizontal: 36,
+      borderRadius: 10,
+      elevation: 4,
+    },
+
+    finishText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: 'bold',
     },
     item: {
       backgroundColor: darkMode ? 'rgb(56, 56, 56)' : 'rgb(223, 221, 221)',

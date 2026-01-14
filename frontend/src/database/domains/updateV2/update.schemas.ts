@@ -1,8 +1,5 @@
 import { db } from '../../index';
 
-
-export function updateBancoV2() {
-    db.execute(`
-
-    `);
+export async function updateBancoV2() {
+  console.log('Updating bancos table to v2...');
 }
