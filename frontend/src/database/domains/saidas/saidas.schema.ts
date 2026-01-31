@@ -28,8 +28,12 @@ export function createSaidasTable() {
 
             tipo INTEGER NOT NULL,
 
+
+
             parcela_atual INTEGER DEFAULT 1,
             total_parcelas INTEGER DEFAULT 1,
+
+            id_parcela_master INTEGER DEFAULT NULL,
 
             id_banco INTEGER NOT NULL,
             id_cartao INTEGER DEFAULT NULL,
@@ -37,10 +41,11 @@ export function createSaidasTable() {
             criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-            foreign key (categoria) references categorias(id),
+            foreign key (categoria) references categorias_saida(id),
             foreign key (tipo) references tipo_saida(id),
             foreign key (id_banco) references bancos(id),
-            foreign key (id_cartao) references cartoes(id)
+            foreign key (id_cartao) references cartoes(id),
+            FOREIGN KEY (id_parcela_master) REFERENCES saidas(id)
         );
     `);
 }

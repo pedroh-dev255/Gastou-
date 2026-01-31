@@ -3,5 +3,4 @@ declare module 'react-native-vector-icons/Feather' {
   export default Icon;
 }
 
-
 declare module 'react-native-battery-optimization-check';

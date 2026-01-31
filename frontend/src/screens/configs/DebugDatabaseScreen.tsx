@@ -48,6 +48,12 @@ export default function DebugDatabaseScreen() {
     carregar();
   }, []);
 
+  const loadLogsData = useCallback(() => {
+    const allLogs: any = getLogs();
+    setLogs(allLogs);
+    setLogStats(getLogStats());
+  }, []);
+
   useEffect(() => {
     loadData();
     loadLogsData();
@@ -77,11 +83,7 @@ export default function DebugDatabaseScreen() {
     }
   };
 
-  const loadLogsData = useCallback(() => {
-    const allLogs: any = getLogs();
-    setLogs(allLogs);
-    setLogStats(getLogStats());
-  }, []);
+  
 
   const filteredLogs = React.useMemo(() => {
     let filtered: any = logs;
@@ -453,7 +455,6 @@ export default function DebugDatabaseScreen() {
 const createStyles = (colors: any, darkMode: boolean) => StyleSheet.create({
   container: {
     padding: 16,
-    paddingTop: 40,
     paddingBottom: 50,
     flex: 1,
     backgroundColor: darkMode ? '#18023b' : '#d0ffff',

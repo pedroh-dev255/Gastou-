@@ -10,14 +10,19 @@ import {
   Switch,
   Alert,
   FlatList,
+  Modal,
+  ScrollView
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { updateUserOnboardingCompleted, getUser, updateUserName, updateUserNotificationsEnabled } from '../database/domains/users/userRepository';
 import { getAllBancos, addBanco, updateBanco } from '../database/domains/bancos/bancosRepository';
+import { getAllCartoes, addCartao, updateCartao } from '../database/domains/cartoes/cartoesRepository';
 import { useNavigation } from '@react-navigation/native';
 import { Platform } from 'react-native';
 import notifee from '@notifee/react-native';
 import { useTheme } from '../components/ThemeContext';
+
+import { isSecurityEnabled, enableSecurity, disableSecurity } from '../security/security.repository';
 
 import EditUserNameModal from '../components/EditUserNameModal';
 import AddEditBancoModal from '../components/AddEditBancoModal';
@@ -26,11 +31,16 @@ const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const navigation = useNavigation<any>();
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [userName, setUserName] = useState('Usuário');
   const [bancos, setBancos] = useState<any>([]);
+  const [cartoes, setCartoes] = useState<any>([]);
   const [modalVisible, setModalVisible] = useState(false);
+
   const { darkMode, toggleDarkMode } = useTheme();
   const [notifications, setNotifications] = useState(false);
+  const [securityEnabled, setSecurityEnabled] = useState<boolean>(false);
+
   const [step, setStep] = useState(0);
   const [modalBancoVisible, setModalBancoVisible] = useState(false);
   const [bancoSelecionado, setBancoSelecionado] = useState<any>(null);
@@ -42,11 +52,14 @@ export default function OnboardingScreen() {
   useEffect(() => {
     loadUser();
     loadBancos();
+    loadCartoes();
   }, []);
 
   async function loadUser() {
     const user = await getUser();
     if (user?.nome) setUserName(user.nome);
+    if (user?. security !== undefined)
+      setSecurityEnabled(user.security === 1)
     if (user?.notifications_enabled !== undefined)
       setNotifications(user.notifications_enabled === 1);
   }
@@ -54,6 +67,11 @@ export default function OnboardingScreen() {
   async function loadBancos() {
     const bancos = await getAllBancos();
     setBancos(bancos);
+  }
+
+  async function loadCartoes() {
+    const cards = await getAllCartoes();
+    setCartoes(cards);
   }
 
   async function finishOnboarding() {
@@ -125,9 +143,85 @@ export default function OnboardingScreen() {
           <Text style={styles.title}>Bem-vindo ao Gastou?</Text>
           <Text style={styles.subtitle}>Seu assistente financeiro pessoal.</Text>
 
+          <TouchableOpacity onPress={() => setShowPrivacy(true)}>
+            <Text
+              style={{
+                marginBottom: 25,
+                fontSize: 14,
+                color: darkMode ? '#ab8abe' : '#43165e',
+                textDecorationLine: 'underline',
+              }}
+            >
+              🔒 Privacidade e segurança
+            </Text>
+          </TouchableOpacity>
+
+          
           <TouchableOpacity style={styles.nextButton} onPress={next}>
             <Feather name="arrow-right" size={24} color={darkMode ? 'black' : 'white'} />
           </TouchableOpacity>
+
+          <Modal
+            visible={showPrivacy}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowPrivacy(false)}
+          >
+            <View style={modal_privacidade.overlay}>
+              <View style={modal_privacidade.sheet}>
+                
+                {/* Header */}
+                <View style={modal_privacidade.header}>
+                  <Feather
+                    name="lock"
+                    size={20}
+                    color={darkMode ? '#ab8abe' : '#43165e'}
+                  />
+                  <Text style={modal_privacidade.title}>Privacidade e segurança</Text>
+                </View>
+
+                {/* Conteúdo */}
+                <ScrollView
+                  style={modal_privacidade.body}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Text style={modal_privacidade.text}>
+                    Para sua segurança e privacidade, todas as informações inseridas no aplicativo são
+                    armazenadas exclusivamente no seu próprio dispositivo. O aplicativo não coleta,
+                    transmite, compartilha ou processa dados pessoais em servidores externos.
+
+                    {'\n\n'}
+                    O Gastou? funciona de forma totalmente local, não realizando qualquer tipo de
+                    monitoramento, rastreamento, análise de uso ou envio de informações a terceiros,
+                    estando em conformidade com a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+
+                    {'\n\n'}
+                    A responsabilidade pela guarda, backup e integridade dos dados é exclusivamente do
+                    usuário. Em caso de perda do dispositivo, desinstalação do aplicativo, restauração
+                    do sistema ou limpeza dos dados, todas as informações serão apagadas de forma
+                    permanente, sem possibilidade de recuperação.
+
+                    {'\n\n'}
+                    Ao utilizar este aplicativo, o usuário declara estar ciente dessas condições e
+                    concorda que a manutenção e a segurança dos dados dependem exclusivamente do uso
+                    adequado do próprio dispositivo.
+                  </Text>
+
+                </ScrollView>
+
+                {/* Footer */}
+                <TouchableOpacity
+                  style={modal_privacidade.button}
+                  onPress={() => setShowPrivacy(false)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={modal_privacidade.buttonText}>Entendi</Text>
+                </TouchableOpacity>
+
+              </View>
+            </View>
+          </Modal>
+
         </>
       );
     }
@@ -157,10 +251,27 @@ export default function OnboardingScreen() {
               <Text style={styles.label}>Notificações</Text>
               <Switch value={notifications} onValueChange={updateNotifications} />
             </View>
+
+            <View style={styles.item}>
+              <Text style={styles.label}>Exigir senha</Text>
+              <Switch
+                value={securityEnabled}
+                onValueChange={async (value) => {
+                  if (value) {
+                    await enableSecurity();
+                    setSecurityEnabled(true);
+                  } else {
+                    await disableSecurity();
+                    setSecurityEnabled(false);
+                  }
+                }}
+              />
+            </View>
           </View>
 
+
            <View style={styles.footer}>
-              <TouchableOpacity style={styles.nextButton} onPress={next}>
+              <TouchableOpacity style={[styles.nextButton, {right: 25}]} onPress={next}>
                 <Feather name="arrow-right" size={24} color={darkMode ? 'black' : 'white'} />
               </TouchableOpacity>
             </View>
@@ -201,6 +312,70 @@ export default function OnboardingScreen() {
                 <Text style={styles.label_card}>{item.nome}</Text>
                 <Text style={styles.type_card}>
                   Tipo: {item.descricao}
+                </Text>
+              </View>
+            )}
+            ListFooterComponent={
+              <TouchableOpacity
+                style={styles.addCard}
+                onPress={() => {
+                  setBancoSelecionado(null);
+                  setModalBancoVisible(true);
+                }}
+              >
+                <Text style={styles.addText}>+</Text>
+              </TouchableOpacity>
+            }
+          />
+
+          <TouchableOpacity
+            style={[styles.nextButton, {width: 60, height: 60, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 50}]}
+            onPress={next}
+          >
+            <Feather name="arrow-right" size={24} color={darkMode ? 'black' : 'white'} />
+          </TouchableOpacity>
+
+          <AddEditBancoModal
+            visible={modalBancoVisible}
+            banco={bancoSelecionado}
+            onClose={() => setModalBancoVisible(false)}
+            onSave={async (data) => {
+              if (data.id) {
+                await updateBanco(data);
+              } else {
+                await addBancoFunction(data);
+              }
+              loadBancos();
+              setModalBancoVisible(false);
+            }}
+          />
+        </View>
+      );
+    }
+
+    if (step === 3) {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Cartões de Credito</Text>
+          <Text style={styles.subtitle}>
+            Adicione seus cartões de Credito/debito para acompanhar suas faturas.
+          </Text>
+
+          <FlatList
+            data={cartoes}
+            keyExtractor={(item) => String(item.id)}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.bankList}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.cardBanck,
+                  { backgroundColor: item.cor },
+                ]}
+              >
+                <Text style={styles.label_card}>{item.tipo}</Text>
+                <Text style={styles.type_card}>
+                  Tipo: {item.bancos_nome}
                 </Text>
               </View>
             )}
@@ -260,6 +435,79 @@ export default function OnboardingScreen() {
   );
 }
 
+const modal_privacidade = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+
+  sheet: {
+    backgroundColor: '#f7eadb',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+    maxHeight: '80%',
+  },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#43165e',
+  },
+
+  body: {
+    marginBottom: 20,
+  },
+
+  text: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#3a3a3a',
+    textAlign: 'justify',
+  },
+
+  button: {
+    backgroundColor: '#43165e',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  /* DARK MODE */
+  sheetDark: {
+    backgroundColor: '#1c002c',
+  },
+
+  titleDark: {
+    color: '#ffffff',
+  },
+
+  textDark: {
+    color: '#ddd',
+  },
+
+  buttonDark: {
+    backgroundColor: '#ab8abe',
+  },
+});
+
+
 const createStyles = (darkMode: boolean) =>
   StyleSheet.create({
     container: {
@@ -295,7 +543,8 @@ const createStyles = (darkMode: boolean) =>
     nextButton: {
       backgroundColor: darkMode ? '#cacaca' : '#43165e',
       padding: 12,
-      borderRadius: 40,
+      //paddingBottom: 50,
+      borderRadius: 50,
     },
     finishButton: {
       bottom: -40,
